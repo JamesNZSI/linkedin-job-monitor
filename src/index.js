@@ -1,11 +1,13 @@
-import { monitorPipeline } from "./monitor.js";
+import { initializeCache, monitorPipeline } from "./monitor.js";
 
 // 15mins as default
 const RUNNING_INTERVAL = parseInt(process.env.RUNNING_INTERVAL, 10) || 15*60*1000;
 
-console.log(`LinkedIn Job Monitor starting with interval ${RUNNING_INTERVAL}...`);
+console.log(`LinkedIn Job Monitor starting with interval ${RUNNING_INTERVAL}ms...`);
 
-// Run immediately when the application starts.
+// 1. Restore previous state
+await initializeCache();
+// 2. repeated running steps
 await monitorPipeline();
 
 // Then run every 15 minutes.

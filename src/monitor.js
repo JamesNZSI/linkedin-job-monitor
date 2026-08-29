@@ -1,7 +1,27 @@
 import { fetchLinkedInJobs } from "./linkedin.js";
-import { syncRecordToGoogleSheets } from "./sheets.js";
+import { syncRecordToGoogleSheets, getActiveJobs } from "./sheets.js";
 
 let localCacheDb = new Map();
+let cacheInitialized = false;
+
+
+/**
+ * Initialise local cache 
+ * using ACTIVE jobs already stored in Google Sheets.
+ */
+export async function initializeCache() {
+    console.log(
+        "[Monitor] Initializing cache from Google Sheets..."
+    );
+
+    localCacheDb = await getActiveJobs();
+    cacheInitialized = true;
+
+    console.log(
+        `[Monitor] Cache initialized with ` +
+        `${localCacheDb.size} ACTIVE job(s).`
+    );
+}
 
 /**
  * Compare the latest LinkedIn snapshot with the previous one.
@@ -86,7 +106,6 @@ export async function monitorPipeline() {
         console.log("\n==============================");
         console.log("[Monitor] Starting monitoring cycle");
         console.log(new Date().toLocaleString());
-        console.log("==============================");
 
         const currentSnapshot = await fetchLinkedInJobs();
         await processDeltas(currentSnapshot);

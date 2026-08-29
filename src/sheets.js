@@ -121,9 +121,9 @@ async function markJobClosed(job) {
 }
 
 /**
- * Read all rows from the job-monitoring spreadsheet.
+ * Read all rows from the google spreadsheet.
  *
- * This will also be useful later when we initialise the application's
+ * run once when we initialise the application's
  * cache from existing spreadsheet data.
  */
 export async function getAllJobRows() {
@@ -138,4 +138,60 @@ export async function getAllJobRows() {
         console.error(`[Sheets Read Error]: ${error.message}`);
         throw error;
     }
+}
+
+/**
+ * Load all ACTIVE jobs from Google Sheets.
+ *
+ * The spreadsheet structure is:
+ * A = Job ID
+ * B = Role
+ * C = Who Posted
+ * D = Location
+ * E = Workplace Type
+ * F = Status
+ * G = Job URL Link
+ */
+export async function getActiveJobs() {
+    const rows = await getAllJobRows();
+    const activeJobs = new Map();
+
+    // Start from index 1 because row 0 contains column headers.
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const [
+            id,
+            title,
+            postedBy,
+            location,
+            type,
+            status,
+            link
+        ] = row;
+
+        // no job id, could be a blank line.
+        if (!id) {
+            continue;
+        }
+
+        // Only keep ACTIVE jobs in our current-state cache.
+        if (status?.toUpperCase() !== "ACTIVE") {
+            continue;
+        }
+
+        activeJobs.set(String(id), {
+            id: String(id),
+            title: title || "",
+            postedBy: postedBy || "",
+            location: location || "",
+            type: type || "",
+            link: link || ""
+        });
+    }
+
+    console.log(
+        `[Google Sheets] Loaded ${activeJobs.size} ACTIVE job(s).`
+    );
+
+    return activeJobs;
 }

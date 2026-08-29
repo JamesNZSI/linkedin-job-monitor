@@ -4,11 +4,13 @@ import * as cheerio from "cheerio";
 export async function fetchLinkedInJobs() {
     // add location make linkedin show 25 listings per page otherwise 3 listings per page
     // can use start+3/25 for next page
-    const url = process.env.JOB_SEARCH_URL;
+    const LINKEDIN_COMPANY_ID = process.env.LINKEDIN_COMPANY_ID;
+    const URL_INCOMPLETE = process.env.JOB_SEARCH_URL;
+    const URL = URL_INCOMPLETE.replace('${LINKEDIN_COMPANY_ID}', LINKEDIN_COMPANY_ID);
     
-    // console.log(`url: ${url}`);
+    console.log(`[LinkedIn Jobs] url: ${URL}`);
 
-    const response = await axios.get(url, {
+    const response = await axios.get(URL, {
         headers: {
             "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
