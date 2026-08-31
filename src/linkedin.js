@@ -8,6 +8,8 @@ export async function fetchLinkedInJobs() {
     const PAGE_SIZE = parseInt(process.env.PAGE_SIZE, 10) || 25;
     // default max pages is 2
     const MAX_PAGES = parseInt(process.env.MAX_PAGES, 10) || 2;
+    // search by keywords
+    const KEYWORDS = process.env.KEYWORDS;
 
     console.log(`[LinkedIn Jobs] url: ${URL}`);
     const allJobs = new Map();
@@ -19,7 +21,7 @@ export async function fetchLinkedInJobs() {
      */
     for (let page = 0; page < MAX_PAGES; page++) {
         const start = page * PAGE_SIZE;
-        const pageUrl = `${URL}&start=${start}`;
+        const pageUrl = `${URL}&start=${start}` + (KEYWORDS ? `&keywords=${encodeURIComponent(KEYWORDS)}` : "");
 
         console.log(
             `[LinkedIn] Fetching page ${page + 1}, start=${start}`
