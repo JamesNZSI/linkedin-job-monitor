@@ -2,6 +2,7 @@ import { google } from "googleapis";
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = process.env.SHEET_NAME;
+const LINKEDIN_COMPANY_ID = process.env.LINKEDIN_COMPANY_ID;
 
 // Authenticate using the Google Service Account
 const auth = new google.auth.GoogleAuth({
@@ -46,7 +47,7 @@ export async function syncRecordToGoogleSheets(action, job) {
 async function addNewJob(job) {
     await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!A:G`,
+        range: `'${SHEET_NAME}'!A:H`,
         valueInputOption: "USER_ENTERED",
         insertDataOption: "INSERT_ROWS",
 
@@ -55,6 +56,7 @@ async function addNewJob(job) {
                 [
                     job.id,
                     job.title,
+                    LINKEDIN_COMPANY_ID,
                     job.postedBy,
                     job.location,
                     job.type,
@@ -77,7 +79,7 @@ async function markJobClosed(job) {
     // Read the existing spreadsheet rows
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!A:G`
+        range: `'${SHEET_NAME}'!A:H`
     });
 
     const rows = response.data.values || [];
@@ -109,7 +111,7 @@ async function markJobClosed(job) {
 
     await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!F${sheetRowNumber}`,
+        range: `'${SHEET_NAME}'!G${sheetRowNumber}`,
         valueInputOption: "USER_ENTERED",
 
         requestBody: {
@@ -130,7 +132,7 @@ export async function getAllJobRows() {
     try {
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `'${SHEET_NAME}'!A:G`
+            range: `'${SHEET_NAME}'!A:H`
         });
 
         return response.data.values || [];
@@ -146,11 +148,12 @@ export async function getAllJobRows() {
  * The spreadsheet structure is:
  * A = Job ID
  * B = Role
- * C = Who Posted
- * D = Location
- * E = Workplace Type
- * F = Status
- * G = Job URL Link
+ * C = Company Id
+ * D = Who Posted
+ * E = Location
+ * F = Workplace Type
+ * G = Status
+ * H = Job URL Link
  */
 export async function getActiveJobs() {
     const rows = await getAllJobRows();
@@ -162,6 +165,7 @@ export async function getActiveJobs() {
         const [
             id,
             title,
+            companyId,
             postedBy,
             location,
             type,
@@ -182,6 +186,7 @@ export async function getActiveJobs() {
         activeJobs.set(String(id), {
             id: String(id),
             title: title || "",
+            companyId: companyId || "",
             postedBy: postedBy || "",
             location: location || "",
             type: type || "",

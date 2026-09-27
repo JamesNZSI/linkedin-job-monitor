@@ -37,6 +37,7 @@ import { syncRecordToGoogleSheets } from "./sheets.js";
 const testJob = {
     id: "999999999",
     title: "Test Software Developer",
+    companyId: "0",
     postedBy: "Test Company",
     location: "Melbourne, VIC",
     type: "Hybrid",
