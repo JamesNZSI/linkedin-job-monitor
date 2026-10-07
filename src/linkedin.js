@@ -46,19 +46,13 @@ export async function fetchLinkedInJobs() {
 
         $("li").each((_, element) => {
             const link = $(element).find("a.base-card__full-link");
-            // console.log(`link: ${link}`);
-            const href = link.attr("href");
-
+            let href = link.attr("href");
             if (!href) return;
 
-            // const match = href.match(/\/view\/(?:.+?-)?(\d+)/) || href.match(/currentJobId=(\d+)/);
             const match = href.match(/\/view\/(?:.+?-)?(\d+)(?:\?|$)/) || href.match(/currentJobId=(\d+)/);
-
             if (!match) return;
 
             const id = match[1];
-            // console.log(`url: ${href}`);
-            // console.log(`id: ${id}`);
 
             const title = $(element)
                 .find(".base-search-card__title")
@@ -87,6 +81,8 @@ export async function fetchLinkedInJobs() {
             } else if (typeText.includes("hybrid")) {
                 type = "Hybrid";
             }
+            //replace url root to https://www.linkedin.com, otherwise will be redirected
+            href = href.split("?")[0].replace(/^https:\/\/([a-z]{2}\.)?linkedin\.com/, "https://www.linkedin.com");            
 
             jobs.set(id, {
                 id,
@@ -94,10 +90,9 @@ export async function fetchLinkedInJobs() {
                 postedBy,
                 location,
                 type,
-                link: href.split("?")[0]
+                link: href
             });
         });
-        // console.log(jobs);
         /*
          * No jobs, gone beyond the available result pages.
          */
@@ -115,6 +110,8 @@ export async function fetchLinkedInJobs() {
          */
         for (const [id, job] of jobs) {
             if (!allJobs.has(id)) {
+                // const poster = await fetchLinkedInJobDetail(job.link);
+                // job.poster = poster;
                 allJobs.set(id, job);
                 newJobsAdded++;
             }
@@ -144,4 +141,35 @@ export async function fetchLinkedInJobs() {
         `[LinkedIn] Total unique jobs found: ${allJobs.size}`
     );
     return allJobs;
+}
+
+/**
+ * Fetches a LinkedIn job detail page and extracts text from base-main-card__title--link.
+ * 
+ * @param {string} url - The LinkedIn job posting URL
+ * @returns {Promise<string>} The trimmed text found in the element
+ */
+export async function fetchLinkedInJobDetail(url) {
+    try {
+        console.log(`[LinkedIn Detail] Fetching URL: ${url}`);
+        
+        const response = await axios.get(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
+                "Accept-Language": "en-AU,en;q=0.9"
+            },
+            timeout: 10000
+        });
+
+        const $ = cheerio.load(response.data);
+        
+        // Target the specific CSS class requested
+        const targetText = $("div.message-the-recruiter h3.base-main-card__title--link").text().trim().split(/\r?\n/)[0].trim();
+
+        console.log(`[LinkedIn Detail] Extracted text: "${targetText}"`);
+        return targetText;
+    } catch (error) {
+        console.error(`[LinkedIn Detail Error]: ${error.message}`);
+        throw error;
+    }
 }

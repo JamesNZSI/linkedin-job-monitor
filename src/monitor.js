@@ -1,8 +1,7 @@
-import { fetchLinkedInJobs } from "./linkedin.js";
+import { fetchLinkedInJobs, fetchLinkedInJobDetail } from "./linkedin.js";
 import { syncRecordToGoogleSheets, getActiveJobs } from "./sheets.js";
 
 let localCacheDb = new Map();
-let cacheInitialized = false;
 
 
 /**
@@ -15,7 +14,6 @@ export async function initializeCache() {
     );
 
     localCacheDb = await getActiveJobs();
-    cacheInitialized = true;
 
     console.log(
         `[Monitor] Cache initialized with ` +
@@ -59,7 +57,8 @@ async function processDeltas(incomingSnapshotMap) {
             console.log(
                 `[Monitor] NEW: ${job.title} (${id})`
             );
-
+            const poster = await fetchLinkedInJobDetail(job.link);
+            job.poster = poster;
             await syncRecordToGoogleSheets(
                 "ADD_NEW",
                 job

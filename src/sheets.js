@@ -60,8 +60,9 @@ async function addNewJob(job) {
                     job.postedBy,
                     job.location,
                     job.type,
-                    "ACTIVE",
-                    job.link
+                    "True",
+                    job.poster,
+                    job.link,
                 ]
             ]
         }
@@ -79,7 +80,7 @@ async function markJobClosed(job) {
     // Read the existing spreadsheet rows
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!A:H`
+        range: `'${SHEET_NAME}'!A:I`
     });
 
     const rows = response.data.values || [];
@@ -115,7 +116,7 @@ async function markJobClosed(job) {
         valueInputOption: "USER_ENTERED",
 
         requestBody: {
-            values: [["CLOSED"]]
+            values: [["False"]]
         }
     });
 
@@ -132,7 +133,7 @@ export async function getAllJobRows() {
     try {
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `'${SHEET_NAME}'!A:H`
+            range: `'${SHEET_NAME}'!A:I`
         });
 
         return response.data.values || [];
@@ -153,7 +154,8 @@ export async function getAllJobRows() {
  * E = Location
  * F = Workplace Type
  * G = Status
- * H = Job URL Link
+ * H = Poster Name
+ * I = Job URL Link
  */
 export async function getActiveJobs() {
     const rows = await getAllJobRows();
@@ -162,6 +164,7 @@ export async function getActiveJobs() {
     // Start from index 1 because row 0 contains column headers.
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
+        console.log(`row:${row}`)
         const [
             id,
             title,
@@ -170,7 +173,8 @@ export async function getActiveJobs() {
             location,
             type,
             status,
-            link
+            poster,
+            link,
         ] = row;
 
         // no job id, could be a blank line.
@@ -179,7 +183,7 @@ export async function getActiveJobs() {
         }
 
         // Only keep ACTIVE jobs in our current-state cache.
-        if (status?.toUpperCase() !== "ACTIVE") {
+        if (status?.toUpperCase() !== "TRUE") {
             continue;
         }
 
@@ -190,7 +194,8 @@ export async function getActiveJobs() {
             postedBy: postedBy || "",
             location: location || "",
             type: type || "",
-            link: link || ""
+            poster: poster || "",
+            link: link || "",
         });
     }
 
