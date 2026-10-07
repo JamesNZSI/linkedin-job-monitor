@@ -61,6 +61,7 @@ async function addNewJob(job) {
                     job.location,
                     job.type,
                     "True",
+                    job.updatedTime,
                     job.poster,
                     job.link,
                 ]
@@ -80,7 +81,7 @@ async function markJobClosed(job) {
     // Read the existing spreadsheet rows
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!A:I`
+        range: `'${SHEET_NAME}'!A:J`
     });
 
     const rows = response.data.values || [];
@@ -112,11 +113,14 @@ async function markJobClosed(job) {
 
     await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${SHEET_NAME}'!G${sheetRowNumber}`,
+        range: `'${SHEET_NAME}'!G${sheetRowNumber}:H${sheetRowNumber}`,
         valueInputOption: "USER_ENTERED",
 
         requestBody: {
-            values: [["False"]]
+            values: [[
+                "False",
+                job.updatedTime
+            ]]
         }
     });
 
@@ -133,7 +137,7 @@ export async function getAllJobRows() {
     try {
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `'${SHEET_NAME}'!A:I`
+            range: `'${SHEET_NAME}'!A:J`
         });
 
         return response.data.values || [];
@@ -154,8 +158,9 @@ export async function getAllJobRows() {
  * E = Location
  * F = Workplace Type
  * G = Status
- * H = Poster Name
- * I = Job URL Link
+ * H = Updated Time
+ * I = Poster Name
+ * J = Job URL Link
  */
 export async function getActiveJobs() {
     const rows = await getAllJobRows();
@@ -173,6 +178,7 @@ export async function getActiveJobs() {
             location,
             type,
             status,
+            updatedTime,
             poster,
             link,
         ] = row;

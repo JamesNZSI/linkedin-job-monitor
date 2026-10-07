@@ -1,6 +1,7 @@
 import { fetchLinkedInJobs, fetchLinkedInJobDetail } from "./linkedin.js";
 import { syncRecordToGoogleSheets, getActiveJobs } from "./sheets.js";
 
+const DETAIL_REQUEST_DELAY = parseInt(process.env.DETAIL_REQUEST_DELAY, 10) || 1000;
 let localCacheDb = new Map();
 
 
@@ -50,15 +51,19 @@ async function processDeltas(incomingSnapshotMap) {
         `[Monitor] Previous: ${localCacheDb.size}, ` +
         `Current: ${incomingSnapshotMap.size}`
     );
-
+    const updatedTime = getUpdatedTime();
+    console.log(`get updatedTime:${updatedTime}`);
     // 1. Detect newly posted jobs
     for (const [id, job] of incomingSnapshotMap.entries()) {
         if (!localCacheDb.has(id)) {
             console.log(
                 `[Monitor] NEW: ${job.title} (${id})`
             );
+            // Wait 1 second before the next request
+            await sleep(DETAIL_REQUEST_DELAY);
             const poster = await fetchLinkedInJobDetail(job.link);
             job.poster = poster;
+            job.updatedTime = updatedTime;
             await syncRecordToGoogleSheets(
                 "ADD_NEW",
                 job
@@ -72,7 +77,7 @@ async function processDeltas(incomingSnapshotMap) {
             console.log(
                 `[Monitor] CLOSED: ${job.title} (${id})`
             );
-
+            job.updatedTime = updatedTime;
             await syncRecordToGoogleSheets(
                 "MARK_CLOSED",
                 job
@@ -104,7 +109,7 @@ export async function monitorPipeline() {
     try {
         console.log("\n==============================");
         console.log("[Monitor] Starting monitoring cycle");
-        console.log(new Date().toLocaleString());
+        // console.log(new Date().toLocaleString());
 
         const currentSnapshot = await fetchLinkedInJobs();
         await processDeltas(currentSnapshot);
@@ -118,3 +123,15 @@ export async function monitorPipeline() {
         );
     }
 }
+// get UTC+10 time in format 24hh:mi
+function getUpdatedTime() {
+    const now = new Date();
+
+    const utcPlus10 = new Date(
+        now.getTime() + 10 * 60 * 60 * 1000
+    );
+
+    return utcPlus10.toISOString().slice(0, 16).replace("T", " ");
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));

@@ -169,6 +169,13 @@ export async function fetchLinkedInJobDetail(url) {
         console.log(`[LinkedIn Detail] Extracted text: "${targetText}"`);
         return targetText;
     } catch (error) {
+        if (error.response?.status === 429) {
+            console.warn(
+                `[LinkedIn Detail] Rate limited (429): ${url}`
+            );
+            return null;
+        }
+
         console.error(`[LinkedIn Detail Error]: ${error.message}`);
         throw error;
     }
