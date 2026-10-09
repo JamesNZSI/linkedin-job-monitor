@@ -2,3 +2,4 @@
 **/node_modules/
 **/command.txt
 node/google-credentials.json
+apps-script/.clasp.json
