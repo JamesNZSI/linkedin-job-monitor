@@ -1,13 +1,16 @@
 // Config.gs
 const CONFIG = {
+  SPREADSHEET_URL:"https://docs.google.com/spreadsheets/d/1K9NUyDyz2gsiVRuUOXw1GG8mygwtQ3hGAvK7U1DJkSA/edit?usp=sharing",
   SPREADSHEET_ID: "1K9NUyDyz2gsiVRuUOXw1GG8mygwtQ3hGAvK7U1DJkSA",
   SHEET_NAME: "Job Monitoring Logs",
   LINKEDIN_COMPANY_ID: "54347115",
-  JOB_SEARCH_URL: "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?location=Australia&f_C=${LINKEDIN_COMPANY_ID}",
+  JOB_SEARCH_URL: "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?f_C=${LINKEDIN_COMPANY_ID}",
   PAGE_SIZE: 25,
   MAX_PAGES: 2,
   KEYWORDS: "",
-  DETAIL_REQUEST_DELAY: 1000 // milliseconds sleep between detail fetches
+  DETAIL_REQUEST_DELAY: 1000, // milliseconds sleep between detail fetches
+  LOCATION: ["Australia", "US"],
+  TIME_ZONE: "GMT+10",
 };
 
 /**

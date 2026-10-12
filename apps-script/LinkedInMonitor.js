@@ -1,13 +1,46 @@
 /**
+ * loop over locations to fetch all jobs
+ */
+function fetchAllLinkedInJobs_() {
+  const combinedJobs = new Map();
+
+  for (const searchLocation of CONFIG.LOCATION) {
+    Logger.log(
+      `[LinkedIn] Starting search for location: ${searchLocation}`
+    );
+
+    const locationJobs = fetchLinkedInJobs_(searchLocation);
+    for (const [id, job] of locationJobs) {
+      if (!combinedJobs.has(id)) {
+        combinedJobs.set(id, job);
+      } 
+    }
+  }
+
+  Logger.log(
+    `[LinkedIn] Combined snapshot: ${combinedJobs.size} unique jobs.`
+  );
+  return combinedJobs;
+}
+
+/**
  * Fetches LinkedIn jobs with pagination support.
  */
-function fetchLinkedInJobs_() {
-  const url = CONFIG.JOB_SEARCH_URL.replace('${LINKEDIN_COMPANY_ID}', CONFIG.LINKEDIN_COMPANY_ID);
+function fetchLinkedInJobs_(searchLocation) {
+  //check searchLocation, no location will lead to a blank return
+  if (!searchLocation || !searchLocation.trim()) {
+    Logger.log("[LinkedIn] Empty search location. Skipping.");
+    return new Map();
+  }
+
+  const baseUrl = CONFIG.JOB_SEARCH_URL.replace('${LINKEDIN_COMPANY_ID}', CONFIG.LINKEDIN_COMPANY_ID);
+  const url = `${baseUrl}&location=${encodeURIComponent(searchLocation)}` + (CONFIG.KEYWORDS ? `&keywords=${encodeURIComponent(CONFIG.KEYWORDS)}` : "");
+
   const allJobs = new Map();
 
   for (let page = 0; page < CONFIG.MAX_PAGES; page++) {
     const start = page * CONFIG.PAGE_SIZE;
-    const pageUrl = `${url}&start=${start}` + (CONFIG.KEYWORDS ? `&keywords=${encodeURIComponent(CONFIG.KEYWORDS)}` : "");
+    const pageUrl = `${url}&start=${start}`;
 
     Logger.log(`[LinkedIn] Fetching page ${page + 1}, start=${start}`);
     Logger.log(`[LinkedIn Jobs] pageUrl: ${pageUrl}`);
@@ -69,7 +102,8 @@ function fetchLinkedInJobs_() {
         postedBy,
         location,
         type,
-        link: cleanLink
+        link: cleanLink,
+        searchLocation
       });
     });
 
@@ -147,7 +181,7 @@ function fetchLinkedInJobDetail_(url) {
 /**
  * Compare snapshots and process deltas.
  */
-function processDeltas_(localCacheDb, incomingSnapshotMap) {
+function processDeltas_(localCacheDb, incomingSnapshotMap, targetSheet) {
   if (incomingSnapshotMap.size === 0) {
     Logger.log("[Safety Abort] No jobs were extracted. Skipping delta processing.");
     return;
@@ -166,7 +200,7 @@ function processDeltas_(localCacheDb, incomingSnapshotMap) {
       job.poster = fetchLinkedInJobDetail_(job.link);
       job.updatedTime = updatedTime;
       
-      syncRecordToGoogleSheets_("ADD_NEW", job);
+      addNewJob_(job, targetSheet);
     }
   }
 
@@ -175,15 +209,15 @@ function processDeltas_(localCacheDb, incomingSnapshotMap) {
     if (!incomingSnapshotMap.has(id)) {
       Logger.log(`[Monitor] CLOSED: ${job.title} (${id})`);
       job.updatedTime = updatedTime;
-      syncRecordToGoogleSheets_("MARK_CLOSED", job);
+      markJobClosed_(job);
     }
   }
 
   Logger.log("[Monitor] Snapshot updated.");
 }
-
+/**
+ * get current date and time
+ */
 function getUpdatedTime_() {
-  const now = new Date();
-  const utcPlus10 = new Date(now.getTime() + 10 * 60 * 60 * 1000);
-  return utcPlus10.toISOString().slice(0, 16).replace("T", " ");
+  return Utilities.formatDate(new Date(), CONFIG.TIME_ZONE, "yyyy-MM-dd HH:mm");
 }
