@@ -9,42 +9,78 @@ function runJobMonitor(createNew = false) {
 
   Logger.log("\n==============================");
   Logger.log("[Monitor] Starting monitoring cycle");
+  Logger.log(`[Monitor] Create new tab: ${createNew}`);
   
   try {
     let latestSheet = getLatestSheet_();
-    let targetSheet;
-
+    //no existed sheet
     if (!latestSheet) {
-      // First run: today's sheet becomes both source and target
-      latestSheet = getOrCreateTodaySheet_();
-      targetSheet = latestSheet;
+      Logger.log("[Monitor] No existing date tab found. Need to create a new tab.");
 
-    } else if (createNew) {
-      // Existing data: load from latest, write new jobs to today's sheet
-      targetSheet = getOrCreateTodaySheet_();
+      const targetSheet = createTodaySheet_();
+      const currentJobs = fetchAllLinkedInJobs_();
 
-    } else {
-      // Normal run: read/write latest sheet
-      targetSheet = latestSheet;
+      saveAllActiveJobs_(
+        currentJobs,
+        targetSheet
+      );
+
+      Logger.log("[Monitor] Initial snapshot completed.");
+      return;
+    }
+    //do not create new sheet, use existed sheet
+    if (!createNew) {
+      const oldActiveJobs = getActiveJobs_(latestSheet);
+      const currentJobs = fetchAllLinkedInJobs_();
+
+      if (currentJobs.size === 0) {
+        Logger.log("[Safety Abort] No jobs were extracted.");
+        return;
+      }
+      // Missing from LinkedIn → CLOSED
+      updateClosedJobs_(oldActiveJobs, currentJobs);
+
+      // New on LinkedIn → append
+      addNewJobs_(oldActiveJobs, currentJobs, latestSheet);
+
+      return;
     }
 
-    Logger.log(
-      `[Monitor] Loading active jobs from: ${latestSheet.getName()}`
-    );
+    const todaySheet = getTodaySheet_();
+    //create new sheet triggered, but today sheet existed, use today sheet
+    if (todaySheet) {
+      const oldActiveJobs = getActiveJobs_(todaySheet);
+      const currentJobs = fetchAllLinkedInJobs_();
 
-    const localCacheDb = getActiveJobs_(latestSheet);
+      if (currentJobs.size === 0) {
+        Logger.log("[Safety Abort] No jobs were extracted.");
+        return;
+      }
 
-    Logger.log(`[Monitor] ${localCacheDb.size} ACTIVE jobs loaded.`);
+      updateClosedJobs_(oldActiveJobs, currentJobs);
+      addNewJobs_(oldActiveJobs, currentJobs, todaySheet);
 
-    Logger.log(`[Monitor] New jobs will be written to: ${targetSheet.getName()}`);
+      return;
+    }
 
-    const currentSnapshot = fetchAllLinkedInJobs_();
+    //create a new today sheet
+    const oldActiveJobs = getActiveJobs_(latestSheet);
+    const currentJobs = fetchAllLinkedInJobs_();
 
-    processDeltas_(
-      localCacheDb,
-      currentSnapshot,
-      targetSheet
-    );
+    if (currentJobs.size === 0) {
+      Logger.log("[Safety Abort] No jobs were extracted.");
+      return;
+    }
+
+    // Old job missing from current LinkedIn, mark False in old sheet
+    updateClosedJobs_(oldActiveJobs, currentJobs);
+
+    // Create today's sheet
+    const newTodaySheet = createTodaySheet_();
+
+    // Today's sheet contains ALL jobs currently returned by LinkedIn.
+    // Existing jobs reuse poster, Only truly new jobs fetch poster.
+    saveAllActiveJobs_(currentJobs, newTodaySheet, oldActiveJobs);
 
     Logger.log("[Monitor] Monitoring cycle completed.");
   } catch (error) {

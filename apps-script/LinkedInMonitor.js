@@ -181,40 +181,82 @@ function fetchLinkedInJobDetail_(url) {
 /**
  * Compare snapshots and process deltas.
  */
-function processDeltas_(localCacheDb, incomingSnapshotMap, targetSheet) {
+// function processDeltas_(localCacheDb, incomingSnapshotMap, targetSheet) {
+//   if (incomingSnapshotMap.size === 0) {
+//     Logger.log("[Safety Abort] No jobs were extracted. Skipping delta processing.");
+//     return;
+//   }
+
+//   Logger.log(`[Monitor] Previous: ${localCacheDb.size}, Current: ${incomingSnapshotMap.size}`);
+//   const updatedTime = getUpdatedTime_();
+
+//   // 1. Detect newly posted jobs
+//   for (const [id, job] of incomingSnapshotMap.entries()) {
+//     if (!localCacheDb.has(id)) {
+//       Logger.log(`[Monitor] NEW: ${job.title} (${id})`);
+      
+//       // Delay before requesting detail page
+//       Utilities.sleep(CONFIG.DETAIL_REQUEST_DELAY);
+//       job.poster = fetchLinkedInJobDetail_(job.link);
+//       job.updatedTime = updatedTime;
+      
+//       addNewJob_(job, targetSheet);
+//     }
+//   }
+
+//   // 2. Detect closed/removed jobs
+//   for (const [id, job] of localCacheDb.entries()) {
+//     if (!incomingSnapshotMap.has(id)) {
+//       Logger.log(`[Monitor] CLOSED: ${job.title} (${id})`);
+//       job.updatedTime = updatedTime;
+//       markJobClosed_(job);
+//     }
+//   }
+
+//   Logger.log("[Monitor] Snapshot updated.");
+// }
+
+
+// Save ALL current active jobs to a newly created daily tab.
+function saveFullSnapshot_(incomingSnapshotMap, targetSheet, oldActiveJobs = new Map()) {
   if (incomingSnapshotMap.size === 0) {
-    Logger.log("[Safety Abort] No jobs were extracted. Skipping delta processing.");
+    Logger.log(
+      "[Safety Abort] No jobs were extracted. Full snapshot not saved."
+    );
+
     return;
   }
 
-  Logger.log(`[Monitor] Previous: ${localCacheDb.size}, Current: ${incomingSnapshotMap.size}`);
   const updatedTime = getUpdatedTime_();
+  for (const [id, job] of incomingSnapshotMap) {
+    const oldJob = oldActiveJobs.get(id);
 
-  // 1. Detect newly posted jobs
-  for (const [id, job] of incomingSnapshotMap.entries()) {
-    if (!localCacheDb.has(id)) {
-      Logger.log(`[Monitor] NEW: ${job.title} (${id})`);
-      
-      // Delay before requesting detail page
-      Utilities.sleep(CONFIG.DETAIL_REQUEST_DELAY);
+    // Reuse existing poster data when possible.
+    if (oldJob) {
+      job.poster = oldJob.poster || "";
+    } else {
+      Utilities.sleep(
+        CONFIG.DETAIL_REQUEST_DELAY
+      );
+
       job.poster = fetchLinkedInJobDetail_(job.link);
-      job.updatedTime = updatedTime;
-      
-      addNewJob_(job, targetSheet);
     }
+
+    job.updatedTime = updatedTime;
+
+    addNewJob_(
+      job,
+      targetSheet
+    );
   }
 
-  // 2. Detect closed/removed jobs
-  for (const [id, job] of localCacheDb.entries()) {
-    if (!incomingSnapshotMap.has(id)) {
-      Logger.log(`[Monitor] CLOSED: ${job.title} (${id})`);
-      job.updatedTime = updatedTime;
-      markJobClosed_(job);
-    }
-  }
-
-  Logger.log("[Monitor] Snapshot updated.");
+  Logger.log(
+    `[Monitor] Saved ${incomingSnapshotMap.size} active jobs to ${targetSheet.getName()}.`
+  );
 }
+
+
+
 /**
  * get current date and time
  */

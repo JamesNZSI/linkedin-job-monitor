@@ -32,3 +32,41 @@ function doPost(e) {
 function slackResponse_(text) {
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.TEXT);
 }
+function testNormalRun() {
+  runJobMonitor(true);
+}
+function testGetLatestSheet() {
+  const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+
+  Logger.log(
+    `[TEST] Spreadsheet: ${spreadsheet.getName()}`
+  );
+
+  Logger.log(
+    `[TEST] Spreadsheet ID: ${spreadsheet.getId()}`
+  );
+
+  const sheets = spreadsheet.getSheets();
+
+  Logger.log(
+    `[TEST] Number of tabs: ${sheets.length}`
+  );
+
+  for (const sheet of sheets) {
+    Logger.log(
+      `[TEST] Tab: "${sheet.getName()}"`
+    );
+  }
+
+  const latestSheet = getLatestSheet_();
+
+  if (latestSheet) {
+    Logger.log(
+      `[TEST] Latest sheet found: "${latestSheet.getName()}"`
+    );
+  } else {
+    Logger.log(
+      "[TEST] ERROR: getLatestSheet_() returned null"
+    );
+  }
+}
